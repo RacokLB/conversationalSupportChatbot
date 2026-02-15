@@ -1,0 +1,1967 @@
+{
+  "name": "🫡 Conversational SupportChatBot with Ollama Model/RAG/Google Drive/Telegram",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b3ce66e0-2b6f-4714-a672-59ef6e43ced9",
+              "name": "prompt",
+              "type": "string",
+              "value": "=1. Reglas\n- Comuníquese de forma formal, clara y respetuosa en todo momento.\n- Sea conciso y preciso, evitando detalles innecesarios.\n- Mantenga un tono positivo y profesional como asistente confiable y experto.\n- Respete los límites del usuario y evite abordar temas prohibidos o inapropiados.\n- Mantenga la conversación interesante fomentando la participación del usuario, pero al solicitar aclaraciones o información adicional, formule solo una pregunta específica a la vez para evitar abrumarlo. Evite finales abruptos.\n- Siga las instrucciones del usuario con precisión.\n- No incluya texto ni explicaciones adicionales a menos que se solicite explícitamente.\n\n2. Instrucciones de respuesta\n- Analice el mensaje y el historial de la conversación para mantener el contexto y la continuidad.\n- Si se solicita la repetición, responda el mensaje exactamente como se proporcionó. De lo contrario, responda de forma clara y adecuada según la intención y el contexto.\n- Si el mensaje es vago, sugiera una interpretación y solicite aclaraciones mientras mantiene la conversación activa.\n- Sugiera al usuario que realice una consulta sobre su póliza de seguro.\n"
+            },
+            {
+              "id": "9be42a5a-90b4-4709-89b4-118cb536c87a",
+              "name": "",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "df5ce4a9-b75f-4d41-b8a4-74a606872ca6",
+      "name": "chatPrompt",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1632,
+        400
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d78c64d5-3c9e-4ffd-875e-973eb3c4d20a",
+              "name": "prompt",
+              "type": "string",
+              "value": "=1. Reglas\n- Comuníquese de forma formal, clara y respetuosa en todo momento.\n- Sea conciso y preciso, evitando detalles innecesarios.\n- Mantenga un tono positivo y profesional como asistente confiable y experto.\n- Respete los límites de los usuarios y evite abordar temas prohibidos o inapropiados.\n- Mantenga la conversación interesante fomentando la participación del usuario, pero al solicitar aclaraciones o información adicional, formule solo una pregunta específica a la vez para evitar abrumarlo. Evite finales abruptos.\n- Siga las instrucciones del usuario con precisión.\n- No incluya texto ni explicaciones adicionales a menos que se le solicite explícitamente.\n\n2. Instrucciones generales\n- Si un mensaje no es claro o carece de detalles, responda con su mejor comprensión como sugerencia y solicite cortésmente al usuario que confirme o proporcione más detalles si no es lo que quería decir.\n- Si la solicitud es inapropiada o irrelevante, responda cortésmente y rechace claramente, manteniendo el respeto y la profesionalidad, e invite a una solicitud válida.\n- Siga siempre las reglas establecidas para mantener la profesionalidad y la precisión. -Deberías hacer una sugerencia para realizar una consulta sobre la póliza de seguro.\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0abab0a6-e3ab-401f-af58-f4910c5fb3f2",
+      "name": "otherPrompt",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1632,
+        560
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Input from user: ' + $('sessionData').item.json.Mensaje + $json.prompt + '\\n\\n' + '\\n\\nRespond only with the exact text requested, strictly following the instructions above.' }}",
+        "options": {
+          "systemMessage": "ROL: Eres el Asistente Virtual Oficial de la Dirección General de Talento Humano del Consejo Nacional Electoral (CNE) de Venezuela. Tu propósito es asesorar con excelencia y formalidad a los funcionarios sobre la póliza de salud vigente y la red de aliados comerciales.\n\nPROCEDIMIENTO INTERNO:\n1. Análisis de Intención: Determina si la duda es \"Administrativa/Normativa\" o \"Geográfica/Proveedor\".\n2. Extracción y Normalización: Identifica entidades y conviértelas SIEMPRE a MAYÚSCULAS para coincidir con la base de datos (ej: \"Zulia\" -> \"ZULIA\").\n3. Normalización Nacional: Si detectas términos como \"en el país\" o \"nacional\", usa el valor \"A NIVEL NACIONAL\".\n4. Construcción de Consulta: Genera un texto descriptivo para el parámetro obligatorio 'query'.\n\nLÓGICA DE HERRAMIENTAS (Búsqueda Semántica):\n\n- consultar_normativa_poliza: \n  * Úsala para dudas sobre el \"CÓMO\" y el \"QUÉ\" (Coberturas, reembolsos, plazos, beneficiarios).\n  * Parámetro obligatorio: 'query' (Texto de la pregunta).\nUsa esta herramienta SOLO para reglas, reembolsos y pasos legales, NUNCA para nombres o direcciones de clínicas\n\n- buscar_clinicas_y_aliados: \n  * Úsala para dudas sobre el \"DÓNDE\" y el \"QUIÉN\" (Ubicación de aliados).\n * En caso de no encontrar la clinica devuelve una lista completa de los lugares disponibles para ese  \"ESTADO\" o  \"CIUDAD\"\n\n\nConsultas Integradas: Si preguntan por un proceso en un lugar específico, ejecuta ambas herramientas.\n\nREGLAS DE RESPUESTA:\n- Prioridad RAG: Responde exclusivamente con la data de las herramientas. Si no hay datos, usa: \"No dispongo de esa información específica en los registros actuales de la póliza.\"\n- Tono: Burocrático de alto nivel, formal y respetuoso.\n- Veracidad: Prohibido inventar montos, teléfonos o direcciones.\n\nFORMATO DE SALIDA:\n1. Estructura con viñetas y usa negritas para nombres de aliados o requisitos.\n2. Deslinde Obligatorio: \n\"Nota: Esta información es referencial y basada en la base de datos de la póliza vigente. La decisión final sobre coberturas, reembolsos y casos especiales compete exclusivamente a la Dirección General de Talento Humano del CNE.\"\n"
+        },
+        "credentials": "postgres"
+      },
+      "id": "eccab307-a421-433a-ab20-cf278c8934d5",
+      "name": "ChatCore",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        2096,
+        352
+      ],
+      "typeVersion": 1.9,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=1. Contexto\nEres un analista de intenciones inteligente diseñado para clasificar con precisión las solicitudes de los funcionarios del Consejo Nacional Electoral (CNE) de Venezuela. Tu objetivo es determinar si el usuario está realizando una consulta sobre su póliza de seguro y aliados comerciales (lo que requiere activar el sistema de recuperación de datos RAG) o si es una interacción diferente. Utiliza el historial de conversación para entender referencias o seguimientos de preguntas anteriores.\n\n2. Instrucciones Generales\n- Utiliza el historial de conversación para interpretar referencias o correcciones (ej. si el usuario pregunta \"¿y en qué horario atiende?\" después de haber preguntado por una clínica específica).\n- Mantén la continuidad del contexto a menos que el usuario cambie explícitamente de tema.\n- Prioriza el mensaje más reciente para evitar confusiones con contextos antiguos.\n- Si el mensaje es vago, sin sentido o demasiado breve (ej. \"hola\", \"ok\"), clasifícalo como \"chat\" u \"otro\" según corresponda.\n\n3. Solicitud del Usuario:\n{{ $('sessionData').item.json.Mensaje }}\n\n4. Historial de Conversación:\n{{ $('latestContext').item.json.messages }}\n\n5. Intenciones\nClasifica la intención del usuario en exactamente una de las siguientes categorías:\n\n- \"consulta\": El usuario solicita información específica sobre la póliza de seguros, coberturas, reembolsos, requisitos de cartas avales, o información sobre aliados comerciales (clínicas, farmacias, laboratorios). Esta intención indica que se debe consultar la base de conocimientos (RAG).\n\n- \"chat\": El usuario entabla una interacción conversacional básica, como saludos, despedidas, agradecimientos o preguntas generales sobre el bot que no requieren consultar la base de datos de seguros.\n\n- \"otro\": La solicitud es restringida, inapropiada, irrelevante para el CNE, sin sentido o carece de un objetivo claro.\n\n**Lista de valor que puedes utilizar:\n*'consulta'\n*'chat'\n*'otro'\n\n6. Tipos de Datos\nDado que este bot está enfocado exclusivamente en asistencia textual para funcionarios:\n- \"text\": Siempre será el valor de retorno, ya que no se permite la generación de imágenes ni contenido multimedia.\n\n7. Instrucción Crítica: Tu respuesta DEBE ser EXCLUSIVAMENTE el objeto JSON. No añadas saludos, no añadas \"aquí tienes el JSON\", no añadas explicaciones. Si no cumples esto, el sistema fallará. \nEjemplo de salida válida: \n\n{\"intention\": \"valor\",\n\"typeData\": \"text\"} \n",
+        "hasOutputParser": true
+      },
+      "id": "37487da1-11dc-4c01-8029-b99eded66829",
+      "name": "inputProcessor",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "position": [
+        1120,
+        368
+      ],
+      "typeVersion": 1.6,
+      "alwaysOutputData": false,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "options": {
+          "groupMessages": true
+        }
+      },
+      "id": "03111148-e8d6-4a35-851a-a398ecbf79ff",
+      "name": "conversationStore",
+      "type": "@n8n/n8n-nodes-langchain.memoryManager",
+      "position": [
+        576,
+        368
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.all();\nconst lastItem = allItems[allItems.length - 1];\n\nif (lastItem && Array.isArray(lastItem.json.messages)) {\n  const messages = lastItem.json.messages;\n  const count = messages.length;\n\n  if (count === 0) return [{ json: { message: \"\" } }];\n\n  const extractFirstLine = (text) => {\n    if (!text) return \"\";\n    return text.split('\\n')[0].replace(/^Input from user:\\s*/, '');\n  };\n\n  const trimEndNewline = (text) => {\n    if (!text) return \"\";\n    return text.replace(/\\n+$/, '');\n  };\n\n  // Tomar los últimos dos o menos mensajes\n  const selectedMessages = (count === 1) ? [messages[0]] : messages.slice(-1);\n\n  // Construir el texto concatenado\n  const combinedMessage = selectedMessages.map((msg, idx) => {\n    return `Message ${idx + 1}:\\nhuman: ${extractFirstLine(msg.human)}\\nai: ${trimEndNewline(msg.ai)}`;\n  }).join('\\n\\n');\n\n  return [{ json: { messages: combinedMessage } }];\n}\n\nreturn [{ json: { messages: \"\" } }];"
+      },
+      "id": "18810eb1-f5ae-4bb8-839e-ec22f0a7142c",
+      "name": "latestContext",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        880,
+        368
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "24ab5811-2b6d-4f2f-8620-8697dadc2d4d",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.output.text.intention }}",
+                    "rightValue": "consulta"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "consulta"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "de4b6e87-950e-461c-869f-d27c73f8d763",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.output.text.intention }}",
+                    "rightValue": "otro"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "otro"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "7b75d907-5823-4f6e-acf1-4e0b6e1af44f",
+                    "leftValue": "={{ $json.output.text.intention }}",
+                    "rightValue": "chat",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "chat"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "98597f86-74e3-45ea-8c5d-2588287d6447",
+      "name": "intentHandler",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        1408,
+        352
+      ],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "29c2230a-e097-4d45-aeaa-28c6f157f839",
+      "name": "userInput",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "position": [
+        16,
+        368
+      ],
+      "webhookId": "ddbf3f08-3f4d-446d-9378-054225c91a06",
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "### 2. Memory and Conversational Context\n\nRetrieves the necessary context to properly infer intentions.\n\n- conversationStore: stores the entire conversation history.\n\n- memoryRetriever: extracts relevant information according to the current need.\n\n- latestContext: formats and prepares the context to be useful in response generation.\n",
+        "height": 776,
+        "width": 428,
+        "color": 3
+      },
+      "id": "2acbda68-d5cb-4343-a016-4a1b4f2bd6e1",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        560,
+        0
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "### 1. Input and Session Management\n\nReceives messages from Telegram and manages the session to maintain context.\n\n- userInput: captures the user's message.\n\n- sessionData: saves and updates the session state.\n\n- interactionTyping: show a typing to add realist \n",
+        "height": 776,
+        "width": 532,
+        "color": 5
+      },
+      "id": "5264e8d3-bf44-49f6-b360-b55cfafeac67",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        0,
+        0
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "### 3. Intent Processing and Prompt Generation\nAnalyzes the intention and selects appropriate prompts according to the user's intention.\n\n- inputProcessor: detects intention and type of content to send.\n\n- intentHandler: redirects the flow based on the intention.\n\n- consultPrompt, chatPrompt, otherPrompt, buildPrompt: store the query prompt for the response.\n\n- modelAnswer : make to answer normal question from user",
+        "height": 776,
+        "width": 988,
+        "color": 6
+      },
+      "id": "5d790de3-f4b6-44c8-aca5-2ddd0db9a422",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1024,
+        0
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "### 4. Core of Generation and Conversation Management\nGenerates responses using Ollama, integrating context for coherence.\n\n- ChatCore: orchestrates the generation and management of the conversation.\n\n- OllamaModel: creates the final response based on prompts.\n\n- conversationMemory: stores information to maintain coherence.\n\n- consultar_normativa_poliza:  tool to provide the model information about policy insurance\n\n- buscar_aliados_y_clinicas: tool to provide the model information about clinics, laboratories & places under insurance coverage\n\n- classificaction_output_prompt: code made with python to handle what type of output the model provide, and classificate with a specific word",
+        "height": 776,
+        "width": 956
+      },
+      "id": "1be09b36-ca05-4b8d-ab06-77254050da4b",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2080,
+        0
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "### 5. Content Classification and User Delivery\n\nDetermines the type of content and manages its delivery via Telegram.\n\n\n\n- errorPreprocessor, textCleaner: clean and validate the content.\n\n- classification_output: in charge to identify which type of output he is. ´success´, ´error´, ´no_info´,´chat´.\n\n- clear_output_from_ai: code made with javascript to clear output to strange caracters, before send it.\n\n- succes_message, error_mesage, no_info_message, normal_chat: notify the user what type of answer he received",
+        "height": 776,
+        "width": 576,
+        "color": 7
+      },
+      "id": "99b58f41-e0af-480d-8514-9775de1234db",
+      "name": "Sticky Note4",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3104,
+        0
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "model": "bge-m3:567m"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        3376,
+        1536
+      ],
+      "id": "f794c591-564c-4fdf-9e31-23ab0a23799b",
+      "name": "Embeddings Ollama"
+    },
+    {
+      "parameters": {
+        "content": "\n- Retrievel Augmented Generation feed to Google drive file and download , when we have files is stored into DB built in supabase \n\n- Google drive Trigger: Each 8 hour is check a specific folder in my drive\n\n- Switch: in charge to classify the file for typefile\n\n-  typeError: send a message via email to notify if have a issues with typefile\n\n- download file RAG: download the file from google drive\n\n-  extract from XLSX, extract file csv, path to follow include , delete row supabase node , stored new data into vector database to ingest information can use by ollama model when calling the tool called: ´buscar_aliados_y_´\n\n-  extract from pdf, pdf_data, path a follow include suoabase node , but ingest information about policy insurance to feed a tool called ´consultar_normativa_poliza´\n\n ",
+        "height": 800,
+        "width": 3168,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1616,
+        848
+      ],
+      "typeVersion": 1,
+      "id": "cfd4a7df-a263-44b8-8c00-ce038ddb62be",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:8b",
+        "options": {
+          "temperature": 0,
+          "topK": 15
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        2144,
+        640
+      ],
+      "id": "aed1cc62-7b9c-491b-ac15-e4485e5be6d4",
+      "name": "Ollama Chat Model"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "70c93816-7110-48e3-a105-568dd766bdf4",
+              "name": "prompt",
+              "type": "string",
+              "value": "=1. Instrucciones Generales Genera una única respuesta profesional, directa y sin comentarios adicionales. La respuesta debe basarse exclusivamente en la información recuperada del sistema RAG sobre la póliza de salud institucional del Consejo Nacional Electoral (CNE). Proporciona la asesoría de manera clara y coherente, asegurando que el funcionario reciba información exacta sobre sus beneficios. Evita el uso de comillas o signos de puntuación innecesarios que dificulten la lectura en dispositivos móviles.\n\n2. Especificaciones de Información y Servicio\n\nExactitud de Cobertura: Identifica si el servicio solicitado está cubierto por la póliza vigente.\n\nGestión de Aliados: Indica la ubicación o especialidad de clínicas y farmacias aliadas según los datos disponibles.\n\nClaridad Institucional: Utiliza un lenguaje respetuoso y propio de la comunicación institucional del CNE en Caracas.\n\nRequisitos: Detalla los pasos administrativos necesarios (como la solicitud de cartas avales o procesos de reembolso) de forma simplificada.\n\n3. Cláusula de Deslinde de Responsabilidad (Obligatoria) Al final de cada respuesta, añade obligatoriamente el siguiente texto en un párrafo separado:\n\n\"Nota: Esta información es referencial y basada en la base de datos de la póliza vigente. La decisión final sobre coberturas, reembolsos y casos especiales compete exclusivamente a la Dirección General de Talento Humano del CNE.\""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9effe0c2-34a9-45fb-a518-91e3510fe5dc",
+      "name": "consultaPrompt",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1632,
+        256
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "model": "gemma2:9b",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmOllama",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        576
+      ],
+      "id": "1e82b172-9713-48ff-9136-975cde15b42b",
+      "name": "Ollama Model"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9b38bc8e-b9cc-4acf-8dfc-4064aec75d0d",
+              "leftValue": "={{ $binary.data.fileExtension }}",
+              "rightValue": "csv",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "46168bb8-77e2-43f5-b823-1f1957f7989f",
+              "leftValue": "={{ $json.mimeType.includes('application/vnd.google-apps.spreadsheet') }}",
+              "rightValue": " application/vnd.google-apps.spreadsheet",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2560,
+        1152
+      ],
+      "id": "cf74311b-fff0-410b-bf1e-f9969edddbc1",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {
+          "maxPages": 5
+        }
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        2688,
+        1424
+      ],
+      "id": "e45bc85f-d7ef-46d7-8af2-a9ea207967bf",
+      "name": "Extract from PDF"
+    },
+    {
+      "parameters": {
+        "operation": "xlsx",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        2672,
+        912
+      ],
+      "id": "8c8ff2d5-edc6-4a28-98fb-d6a3e60b333b",
+      "name": "Extract from XLSX"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('userInput').item.json.message.chat.id }}",
+        "contextWindowLength": 3
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        1232,
+        976
+      ],
+      "id": "ed6bcd0f-8b48-4e5b-a56c-7b469a4d7831",
+      "name": "Postgres Chat Memory"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyHour"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1KYQcByNonsmakCsMz1lfkPliSMmRkchb",
+          "mode": "list",
+          "cachedResultName": "testn8n",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1KYQcByNonsmakCsMz1lfkPliSMmRkchb"
+        },
+        "event": "fileCreated",
+        "options": {
+          "fileType": "all"
+        }
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        1696,
+        1200
+      ],
+      "id": "024c7fff-4a13-432f-af37-36e940ec5c40",
+      "name": "Google Drive Trigger"
+    },
+    {
+      "parameters": {
+        "model": "gemma2:9b",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        1776,
+        688
+      ],
+      "id": "6e2502d7-d4f5-40db-b628-1537a914ce30",
+      "name": "Ollama Chat Model1"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"action\": \"parse\",\n    \"text\": {\n      \"intention\": \"valor\",\n      \"typeData\": \"text\"\n    }\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1248,
+        576
+      ],
+      "id": "43acb7a2-4d01-45df-9395-8e9ad27bcdd0",
+      "name": "Structured Output Parser",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Utiliza esta herramienta únicamente para buscar reglas generales, condiciones de cobertura, porcentajes de reembolso, recaudos para reembolsos, plazos de espera, servicios de asistencia funerario, coberturas, consultas sobre atencion primaria, beneficiarios y pasos administrativos para solicitar cartas avales. No contiene nombres de clínicas específicas, solo la normativa legal y técnica de la póliza de salud del CNE del ano 2025",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "includeDocumentMetadata": false,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        2336,
+        592
+      ],
+      "id": "74706f11-0635-4cbf-81c3-8e5072fe959f",
+      "name": "consultar_normativa_poliza"
+    },
+    {
+      "parameters": {
+        "operation": "sendChatAction",
+        "chatId": "={{ $json.sessionId }}"
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        416,
+        368
+      ],
+      "id": "12d617e7-0331-4288-ac33-78b6f4537ee5",
+      "name": "Send a chat action",
+      "webhookId": "3a6d3f96-3116-4011-a26e-91a2daeef40f"
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "Mensaje",
+              "value": "={{ $('userInput').item.json.message.text }}"
+            },
+            {
+              "name": "sessionId",
+              "value": "={{ $('userInput').item.json.message.chat.id }}"
+            },
+            {
+              "name": "Lenguaje",
+              "value": "={{ $('userInput').item.json.message.from.language_code }}"
+            },
+            {
+              "name": "Username",
+              "value": "={{ $('userInput').item.json.message.chat.username }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "888f55d2-a409-45b1-9b66-d481973a4c94",
+      "name": "sessionData",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        208,
+        368
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "168e8d6b-1b8a-4367-9494-f1d1cd643fa2",
+              "name": "rif",
+              "value": "={{ $json.rif }}",
+              "type": "string"
+            },
+            {
+              "id": "c85b9bb4-4d14-4fb6-9841-e35122ab099e",
+              "name": "proveedor",
+              "value": "={{ $json.proveedor }}",
+              "type": "string"
+            },
+            {
+              "id": "99819cb4-ef71-472c-9866-e5547dfe8eca",
+              "name": "tipo_servicio",
+              "value": "={{ $json.tipo_servicio }}",
+              "type": "string"
+            },
+            {
+              "id": "fe499bc7-8691-4f29-8f9c-84a4eca5c285",
+              "name": "clasificacion_servicio",
+              "value": "={{ $json.clasificacion_servicio }}",
+              "type": "string"
+            },
+            {
+              "id": "aac8b1c9-970b-4426-bf3d-55712ebfe06b",
+              "name": "estado",
+              "value": "={{ $json.estado }}",
+              "type": "string"
+            },
+            {
+              "id": "e33861a6-ee27-4eeb-b786-a72742d30ff6",
+              "name": "ciudad",
+              "value": "={{ $json.ciudad }}",
+              "type": "string"
+            },
+            {
+              "id": "deb8a70c-a7ca-4e14-ba9a-8a3303cc6073",
+              "name": "telefono_master",
+              "value": "={{ $json.telefono_master }}",
+              "type": "string"
+            },
+            {
+              "id": "35c47c21-3ae7-4b5b-955d-a21e511e360d",
+              "name": "correo_electronico",
+              "value": "={{ $json.correo_electronico }}",
+              "type": "string"
+            },
+            {
+              "id": "438ad7cf-6c71-486e-85f9-347e07143bb6",
+              "name": "direccion",
+              "value": "={{ $json.direccion}}",
+              "type": "string"
+            },
+            {
+              "id": "e5b053e7-36f6-4bf9-8381-5982d1668818",
+              "name": "expediente",
+              "value": "={{ $json.expediente }}",
+              "type": "string"
+            },
+            {
+              "id": "d5547886-c24b-4c8c-af80-4626af41cd5b",
+              "name": "registro_sigep_rms_ikki",
+              "value": "={{ $json.registro_sigep_rms_ikki }}",
+              "type": "string"
+            },
+            {
+              "id": "1ff3dc8f-9856-4587-840a-b2fef0dce393",
+              "name": "estatus",
+              "value": "={{ $json.estatus }}",
+              "type": "string"
+            },
+            {
+              "id": "a2e7a516-d98d-45ef-8f38-ee618c4d05f3",
+              "name": "content",
+              "value": "=Aliado: {{ $json.proveedor }} | \nRIF: {{ $json.rif }} | \nTipo de Servicio: {{ $json.tipo_servicio }} \nClasificacion de Servicio:{{ $json.clasificacion_servicio }}) | \nUbicación: {{ $json.ciudad }}, Edo. {{ $json.estado }} | Dirección: {{ $json.direccion }} | Contacto: {{ $json.telefono_master }} / {{ $json.correo_electronico }} | Estatus: {{ $json.estatus }}",
+              "type": "string"
+            },
+            {
+              "id": "5eb2cda5-8528-4383-ac76-8ab98a4e0eff",
+              "name": "metadata",
+              "value": "={{\n{\n  \n  \"rif\": $json[\"R.I.F.\"],\n  \"proveedor\":$json.PROVEEDOR,\n  \"tipo_servicio\": $json[\"TIPO DE SERVICIO\"],\n  \"clasificacion_servicio\": $json[\"CLASIFICACION DE SERVICIO\"],\n  \"estado\": $json.ESTADO,\n  \"ciudad\": $json.CIUDAD,\n  \"telefono_master\":$json[\"TELEFONO MASTER\"],\n  \"correo_electronico\":$json[\"CORREO ELECTRONICO\"],\n  \"direccion\":$json.DIRECCION,\n  \"expediente\":$json.EXPEDIENTE,\n  \"registro_sigep_rms_ikki\":$json['REGISTRO EN SISTEMAS SIGEP - RMS - IKKI'],\n  \"estatus\":$json.ESTATUS\n}\n}}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {
+          "ignoreConversionErrors": true
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2912,
+        912
+      ],
+      "id": "33e8a073-86b2-4b02-95fe-57e7940ffe0b",
+      "name": "excel_data"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c17980a8-6052-45a5-9e88-b5467518ad4f",
+              "name": "author",
+              "value": "={{ $json.info.Author }}",
+              "type": "string"
+            },
+            {
+              "id": "291bc63b-5c32-4041-a2e4-9b0a13719648",
+              "name": "creation_date",
+              "value": "={{ $json.info.CreationDate }}",
+              "type": "string"
+            },
+            {
+              "id": "91c4b60d-ada5-4cf4-b826-77b2b14fafb9",
+              "name": "modification_date",
+              "value": "={{ $json.info.ModDate }}",
+              "type": "string"
+            },
+            {
+              "id": "002a4247-cba8-41c1-8e8e-a2a5e91a4530",
+              "name": "metadata",
+              "value": "={{ $json.numpages }}",
+              "type": "number"
+            },
+            {
+              "id": "37e5c632-87c7-4ce2-b3ed-b4f509876df2",
+              "name": "metadata_id",
+              "value": "={{ $json.metadata['xmpmm:documentid'] }}",
+              "type": "string"
+            },
+            {
+              "id": "5a2c9e37-f376-428a-95d4-2ff77f832931",
+              "name": "content",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "c23de67a-9823-4f1c-a8c0-1a34026b101d",
+              "name": "num_pages",
+              "value": "={{ $json.numpages }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2976,
+        1424
+      ],
+      "id": "cf78a3f8-c85e-45d5-8567-fdf546e65894",
+      "name": "pdf_data"
+    },
+    {
+      "parameters": {
+        "batchSize": 20,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        3744,
+        960
+      ],
+      "id": "a1efd418-0d34-48fc-bef3-f7f4efc563b2",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tableId": "aliados_comerciales",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "registro_sigep_rms_ikki",
+              "condition": "eq",
+              "keyValue": "SI"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3312,
+        944
+      ],
+      "id": "f2615ee3-a3d3-4b69-a3bf-ff9816cf4b0c",
+      "name": "Delete a row",
+      "retryOnFail": true,
+      "disabled": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.fileExtension }}",
+                    "rightValue": "pdf",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "81d3afe9-4566-4cc4-a792-05e3308bddf1"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "pdf_document"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "3366c932-8e4e-40df-81fc-a2813425ff1d",
+                    "leftValue": "={{ $json.fileExtension }}",
+                    "rightValue": "csv",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "csv_document"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "469df99f-6d36-46bd-86cc-481e8c90705b",
+                    "leftValue": "={{ $json.exportLinks['text/csv'] }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "spreadsheet_document"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2000,
+        1168
+      ],
+      "id": "69f0682a-0af2-4b20-949d-aa3c8124dfb1",
+      "name": "chooseTypeFile"
+    },
+    {
+      "parameters": {
+        "sendTo": "consejonacionalprogramming@gmail.com",
+        "subject": "Error de Type",
+        "message": "=Hola!.\n\nCumplo con informar que fue subido un archivo el cual no cumple con los formatos establecidos para alimentar al modelo. Enviado atraves del correo : {{ $('Google Drive Trigger').item.json.owners[0].emailAddress }}\n\nArchivo con el nombre :\n{{ $('Google Drive Trigger').item.json.name }}\n\nType del archivo: {{ $('Google Drive Trigger').item.json.mimeType }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2256,
+        1408
+      ],
+      "id": "a22a1da4-09d0-4dda-9ac5-62143af1baa0",
+      "name": "typeError",
+      "webhookId": "1584560e-070d-4e40-92c9-fff76eb41d46"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "options": {
+          "queryName": "match_normativa"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        3488,
+        1200
+      ],
+      "id": "edb145ea-f831-41b5-b771-78a694272624",
+      "name": "PDF ingest"
+    },
+    {
+      "parameters": {
+        "jsonMode": "=expressionData",
+        "jsonData": "={{ $json.content }}",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "=metadata",
+                "value": "={{ $json.metadata }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        3696,
+        1456
+      ],
+      "id": "2dcf0b3f-3ba9-4b92-b367-376d12d35dbd",
+      "name": "PDFLoader"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $vars.telegram_id }}",
+        "text": "=📊 *Progreso de Ingesta CNE*\n\n✅ Lote {{ $node[\"Loop Over Items\"].context.currentRunIndex + 1 }} procesado con éxito.\n📈 Registros cargados: {{ Math.min(($('Loop Over Items').context.currentRunIndex + 1 ) * $(\"Loop Over Items\").params.batchSize)\n,  \n$('excel_data').all().length }} / {{ $('excel_data').all().length }}\n⏳ Quedan aproximadamente: {{ Math.max(0, $('excel_data').all().length - (($('Loop Over Items').context.currentRunIndex + 1) * $(\"Loop Over Items\").params.batchSize)) }} registros.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4400,
+        976
+      ],
+      "id": "503383f4-ac3c-4d8d-8edb-3c1c1dd7a7d2",
+      "name": "notificationMessageCsv",
+      "webhookId": "bdb545d3-ce7c-4d96-8383-6cc62a871681",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $vars.telegram_id }}",
+        "text": "🚀 ¡Ingesta Completada! Los 568 aliados comerciales ya están disponibles para consulta mediante RAG. Llama 3.1 ya puede acceder a la base de datos actualizada.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3920,
+        848
+      ],
+      "id": "28685344-72dc-4172-bb7a-1c55fee3ce8d",
+      "name": "doneMessage",
+      "webhookId": "ab28830a-8511-4cc6-b7fb-e12715cfa774",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.id }}"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2336,
+        1152
+      ],
+      "id": "ba535289-0363-4bba-aade-58ee7bfe04c3",
+      "name": "Download file RAG"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        4608,
+        976
+      ],
+      "id": "4b352c9a-4733-40c9-b936-969fd0398015",
+      "name": "Wait",
+      "webhookId": "56ecb7f1-af7e-42e4-bcfb-2967a876eeef",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $json.content }}",
+        "textSplittingMode": "custom",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "=rif",
+                "value": "={{ $json.rif }}"
+              },
+              {
+                "name": "proveedor",
+                "value": "={{ $json.proveedor }}"
+              },
+              {
+                "name": "clasificacion_servicio",
+                "value": "={{ $json.clasificacion_servicio }}"
+              },
+              {
+                "name": "estado",
+                "value": "={{ $json.estado }}"
+              },
+              {
+                "name": "ciudad",
+                "value": "={{ $json.ciudad }}"
+              },
+              {
+                "name": "telefono_master",
+                "value": "={{ $json.telefono_master}}"
+              },
+              {
+                "name": "correo_electronico",
+                "value": "={{ $json.correo_electronico }}"
+              },
+              {
+                "name": "direccion",
+                "value": "={{ $json.direccion }}"
+              },
+              {
+                "name": "expediente",
+                "value": "={{ $json.expediente }}"
+              },
+              {
+                "name": "registro_sigep_rms_ikki",
+                "value": "={{ $json.registro_sigep_rms_ikki }}"
+              },
+              {
+                "name": "estatus",
+                "value": "={{ $json.estatus }}"
+              },
+              {
+                "name": "metadata",
+                "value": "={{ $json.metadata }}"
+              },
+              {
+                "name": "tipo_servicio",
+                "value": "={{ $json.tipo_servicio }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        4464,
+        1312
+      ],
+      "id": "f6a05c08-aafe-4a8d-bf84-137734fa1e90",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Capturamos el texto que viene del \nconst items = $input.all()\nlet text = items[0].json.output || items[0].json.text || \"\";\n\n// 1. Bolding (Negritas): Convertimos encabezados comunes a formato MarkdownV2\n// Buscamos palabras clave seguidas de \":\" para ponerlas en negrita\ntext = text.replace(/(Clínicas Disponibles|Requisitos|Cobertura|Procedimiento):/g, '*$1:*');\n\n// 2. Limpieza de Caracteres: Eliminamos residuos de JSON o bloques de código de IA\ntext = text.replace(/```json|```/g, ''); // Limpia bloques de código\ntext = text.replace(/[\\{\\}\\[\\]\"']/g, (match) => {\n    // Solo elimina llaves o corchetes si parecen ser residuos de un objeto JSON mal formateado\n    return ''; \n});\n\n// 3. Verificación de Deslinde: Aseguramos que la cláusula del CNE esté presente\nconst disclaimer = \"\\n\\n*Nota:* Esta información es referencial y basada en la póliza vigente. La decisión final compete exclusivamente a la Dirección General de Talento Humano del CNE.\";\n\nif (!text.includes(\"Talento Humano del CNE\")) {\n    text = text.trim() + disclaimer;\n}\n\n// Retornamos el texto limpio para el nodo de Telegram\nreturn [{\n    json: {\n        text_final: text\n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3328,
+        336
+      ],
+      "id": "3f4fb1d2-85ba-4984-9367-035ed88e407a",
+      "name": "clear_output_from_ai"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('sessionData').item.json.sessionId }}",
+        "text": "={{ $('clear_output_from_ai').item.json.text_final }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "83c0ade4-779c-40c6-9045-69db3c9a8855",
+      "name": "success_message",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        3504,
+        336
+      ],
+      "webhookId": "1d1eee00-2306-4ac1-870f-0988e305f0d0",
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('sessionData').item.json.sessionId }}",
+        "text": "={{ $json.text }}{{ $('modelAnswer').item.json.text }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3504,
+        480
+      ],
+      "id": "3808133c-e4f0-44f3-a0a1-c78e8f722c57",
+      "name": "error_message",
+      "webhookId": "7e184042-9f04-43af-a9ea-589995700026"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "success",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "415a2026-9f5e-4e30-af98-17f5c4006ec6"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "success"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "eb8f2ff0-efbb-46ee-bca8-e153ef0f659f",
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "error",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "error_response"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "61dd64f2-2cbc-4b8a-84b6-c90374196f6d",
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "no_info",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "no_info"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "57c4b559-a8f6-4eae-ab53-1fcdf0393383",
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "chat"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        3136,
+        400
+      ],
+      "id": "7ee079eb-55da-4dff-95f8-62fba1577e4f",
+      "name": "classification_message"
+    },
+    {
+      "parameters": {
+        "language": "pythonNative",
+        "pythonCode": "# 1. Obtener la salida del ChatCore\n# Usamos items[0].json para n8n moderno\ncurrent_item = _items[0][\"json\"]\nresponse = current_item.get('output', '')\nlower_response = response.lower()\n\n# 2. Definir marcadores de búsqueda fallida (Error de información)\n# Si el bot dice alguna de estas, lo clasificamos como 'error' para soporte\nno_info_markers = [\n    \"no dispongo\", \n    \"no he podido\", \n    \"no encontré\", \n    \"no se encuentra\", \n    \"no hay registros\",\n    \"no tengo información\"\n]\n\n# 3. Lógica de Clasificación Estricta\nif not response.strip() or any(marker in lower_response for marker in no_info_markers):\n    # CASO ERROR: La IA no encontró datos o la respuesta está vacía\n    final_status = \"error\"\nelif \"Dirección General de Talento Humano\" in response:\n    # CASO SUCCESS: La IA encontró datos (identificado por el deslinde obligatorio)\n    final_status = \"success\"\nelse:\n    # CASO CHAT: Saludos, agradecimientos o conversación social\n    final_status = \"chat\"\n\n# 4. Limpieza de texto (Eliminar marcas técnicas)\nclean_text = response.replace(\"SUCCESS\", \"\").strip()\n\n# 5. Retornar el objeto procesado\nreturn {\n    \"text\": clean_text,\n    \"status\": final_status\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2688,
+        336
+      ],
+      "id": "df1f7446-5ea2-4dce-9df6-9b571aefe0e1",
+      "name": "classification_output_prompt"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.prompt }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=1. Identidad y Tono: Eres el Asistente Virtual Oficial del Consejo Nacional Electoral (CNE). Tu trato debe ser excepcionalmente educado, cordial y cálido, transmitiendo una sensación de acompañamiento al funcionario, pero manteniendo siempre la sobriedad y el profesionalismo institucional.\n\n2. Gestión de Contexto (Memoria Manual):\n\nSe te proporcionará un bloque denominado \"Historial reciente\". Úsalo para dar continuidad a la charla.\n\nSi el usuario te saluda de nuevo, reconoce si ya han estado hablando (ej: \"Es un gusto saludarle nuevamente...\").\n\nSi el mensaje actual es una continuación de un agradecimiento o una despedida, responde con cortesía institucional.\n\n3. Directriz de Redirección (Call to Action): Tu objetivo principal es que el funcionario utilice las herramientas de consulta. Independientemente de la interacción (saludo, agradecimiento o comentario general), debes incluir una invitación cordial a realizar consultas sobre:\n\nCoberturas y montos de la póliza de salud CNE.\n\nEstatus y requisitos de reembolsos.\n\nUbicación de clínicas, laboratorios y farmacias aliadas a nivel nacional.\n\n4. Restricciones de Contenido:\n\nNo inventes datos: Si el usuario intenta sacarte información de la póliza en este canal de \"Chat\", explícale con amabilidad que para darle datos exactos debe formular la pregunta de forma específica (para activar el sistema RAG).\n\nNeutralidad: No emitas opiniones personales, políticas o ajenas a la asistencia administrativa del CNE.\n\nIdioma: Responde estrictamente en español."
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "=Historial reciente: {{ $('conversationStore').item.json.messages.last(0).human }}{{ $('conversationStore').item.json.messages.last(0).ai }} | Mensaje actual: {{ $('sessionData').item.json.Mensaje }}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1792,
+        496
+      ],
+      "id": "50add928-4c6d-41d6-b19e-7e8eca547db9",
+      "name": "modelAnswer"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('sessionData').item }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3504,
+        640
+      ],
+      "id": "11b88489-a1d7-48ea-9e4f-a6717a56e4fc",
+      "name": "Send a text message",
+      "webhookId": "17d7b4de-31be-43b5-b42f-38409647018a"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Herramienta principal de localización geográfica de la red de salud del CNE. Úsala obligatoriamente cuando el funcionario realice consultas de ubicación ('¿Dónde hay...?', '¿Qué clínicas quedan en...?', 'Aliados en el estado...') o solicite datos de contacto y teléfonos. Está optimizada para filtrar por 'estado' y 'ciudad' en MAYÚSCULAS. También actívala si se mencionan categorías como 'Clínica' o 'Laboratorio' para devolver la lista de opciones disponibles en una zona específica",
+        "tableName": {
+          "__rl": true,
+          "value": "aliados_comerciales",
+          "mode": "list",
+          "cachedResultName": "aliados_comerciales"
+        },
+        "topK": 7,
+        "includeDocumentMetadata": false,
+        "options": {
+          "queryName": "match_aliados"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        2688,
+        592
+      ],
+      "id": "9f4f111f-3b0d-4b48-8df5-1e93ad3b5df0",
+      "name": "buscar_clinicas_y_aliados"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "value": "aliados_comerciales",
+          "mode": "list",
+          "cachedResultName": "aliados_comerciales"
+        },
+        "options": {
+          "queryName": "match_aliados"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        4048,
+        976
+      ],
+      "id": "3bada2fd-1686-462f-9116-1cdd4f691697",
+      "name": "Supabase Vector Store"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        4560,
+        1520
+      ],
+      "id": "34194876-a8ec-4af0-a5ec-45140a368ff3",
+      "name": "Recursive Character Text Splitter"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('sessionData').item.json.sessionId }}",
+        "text": "={{ $json.text }}",
+        "replyMarkup": "replyKeyboard",
+        "replyKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Clinicas en Caracas",
+                    "additionalFields": {}
+                  },
+                  {
+                    "text": "Clinicas en Valencia",
+                    "additionalFields": {}
+                  },
+                  {
+                    "text": "Informacion Sobre reembolsos",
+                    "additionalFields": {}
+                  },
+                  {
+                    "text": "Servicio Funerario",
+                    "additionalFields": {}
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "replyKeyboardOptions": {},
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3248,
+        640
+      ],
+      "id": "630f341a-2c57-4077-af09-953294ff8ab6",
+      "name": "Send a text message1",
+      "webhookId": "fb8eb914-74bf-44d0-8f16-004c914be754"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "ChatCore": {
+      "main": [
+        [
+          {
+            "node": "classification_output_prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "userInput": {
+      "main": [
+        [
+          {
+            "node": "sessionData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "chatPrompt": {
+      "main": [
+        [
+          {
+            "node": "modelAnswer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "otherPrompt": {
+      "main": [
+        [
+          {
+            "node": "modelAnswer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "intentHandler": {
+      "main": [
+        [
+          {
+            "node": "consultaPrompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "otherPrompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "chatPrompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "latestContext": {
+      "main": [
+        [
+          {
+            "node": "inputProcessor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "inputProcessor": {
+      "main": [
+        [
+          {
+            "node": "intentHandler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "conversationStore": {
+      "main": [
+        [
+          {
+            "node": "latestContext",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama": {
+      "ai_embedding": [
+        [
+          {
+            "node": "consultar_normativa_poliza",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "PDF ingest",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "buscar_clinicas_y_aliados",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "ChatCore",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "consultaPrompt": {
+      "main": [
+        [
+          {
+            "node": "ChatCore",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "inputProcessor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Extract from XLSX",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract from PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from PDF": {
+      "main": [
+        [
+          {
+            "node": "pdf_data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from XLSX": {
+      "main": [
+        [
+          {
+            "node": "excel_data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "conversationStore",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "ChatCore",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive Trigger": {
+      "main": [
+        [
+          {
+            "node": "chooseTypeFile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "modelAnswer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "inputProcessor",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "consultar_normativa_poliza": {
+      "ai_tool": [
+        [
+          {
+            "node": "ChatCore",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a chat action": {
+      "main": [
+        [
+          {
+            "node": "conversationStore",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sessionData": {
+      "main": [
+        [
+          {
+            "node": "Send a chat action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "excel_data": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "pdf_data": {
+      "main": [
+        [
+          {
+            "node": "PDF ingest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "doneMessage",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete a row": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "chooseTypeFile": {
+      "main": [
+        [
+          {
+            "node": "Download file RAG",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Download file RAG",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Download file RAG",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "typeError",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PDFLoader": {
+      "ai_document": [
+        [
+          {
+            "node": "PDF ingest",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "notificationMessageCsv": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file RAG": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "clear_output_from_ai": {
+      "main": [
+        [
+          {
+            "node": "success_message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "classification_message": {
+      "main": [
+        [
+          {
+            "node": "clear_output_from_ai",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "error_message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "classification_output_prompt": {
+      "main": [
+        [
+          {
+            "node": "classification_message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "modelAnswer": {
+      "main": [
+        [
+          {
+            "node": "classification_output_prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "buscar_clinicas_y_aliados": {
+      "ai_tool": [
+        [
+          {
+            "node": "ChatCore",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Vector Store": {
+      "main": [
+        [
+          {
+            "node": "notificationMessageCsv",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "053a69ee-c887-44a6-b887-6228bc80be43",
+  "meta": {
+    "instanceId": "887d8a46840d6986369f8ad60a82c5c8b13967f5be351d5003dbe766f27a53d8"
+  },
+  "id": "bdYO-pBLHrioYl611sMGt",
+  "tags": []
+}
